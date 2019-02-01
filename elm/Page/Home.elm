@@ -9,18 +9,8 @@ import Html.Attributes as Attr
 import Route
 
 
-view : Elm.Project.Project -> List (Html msg)
-view project =
-    case project of
-        Elm.Project.Application appInfo ->
-            viewAppHome appInfo
-
-        Elm.Project.Package pkgInfo ->
-            viewPkgHome pkgInfo
-
-
-viewAppHome : Elm.Project.ApplicationInfo -> List (Html msg)
-viewAppHome appInfo =
+view : Elm.Project.ApplicationInfo -> List (Html msg)
+view appInfo =
     appInfo.depsDirect
         |> List.map viewLink
         |> List.intersperse (Html.br [] [])
@@ -34,10 +24,3 @@ viewLink ( name, version ) =
         , Html.text " "
         , Html.text (Elm.Version.toString version)
         ]
-
-
-viewPkgHome : Elm.Project.PackageInfo -> List (Html msg)
-viewPkgHome pkgInfo =
-    pkgInfo.deps
-        |> List.map (\( name, constraint ) -> Html.text (Elm.Package.toString name ++ "@" ++ Elm.Constraint.toString constraint))
-        |> List.intersperse (Html.br [] [])

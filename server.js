@@ -14,6 +14,8 @@ http
             serveDocs(requestPath, response);
         } else if (requestPath == "/elm.js") {
             serveElm(response);
+        } else if (requestPath == "/style.css") {
+            serveStyle(response);
         } else {
             serveIndex(response);
         }
@@ -81,6 +83,14 @@ function serveIndex(response) {
     response.end(indexHtml());
 }
 
+function serveStyle(response) {
+    response.setHeader("content-type", "text/css");
+    var cssPath = path.join(__dirname, "style.css");
+    var cssData = fs.readFileSync(cssPath);
+
+    response.end(cssData);
+}
+
 function serveElm(response) {
     response.setHeader("content-type", "text/javascript");
     var elmJSPath = path.join(__dirname, "elm.js");
@@ -92,9 +102,12 @@ function serveElm(response) {
 function indexHtml() {
     var compactData = JSON.stringify(elmJson(), null, 0);
 
-    return `<html><body>
-<script src="/elm.js"></script>
-<script>Elm.Main.init({flags: ${compactData}});</script>
+    return `<html>
+<head><link rel="stylesheet" href="/style.css"></head>
+<body>
+  <script src="/elm.js"></script>
+  <script>Elm.Main.init({flags: ${compactData}});</script>
+</body>
 </html>`;
 }
 

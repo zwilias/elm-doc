@@ -102,7 +102,7 @@ update msg model =
                 PackagePage pkgPage ->
                     let
                         ( page, cmds ) =
-                            Page.Package.update pageMsg pkgPage
+                            Page.Package.update model.navKey pageMsg pkgPage
                     in
                     ( { model | page = PackagePage page }
                     , Cmd.map PackagePageMsg cmds
@@ -115,8 +115,19 @@ update msg model =
 appView : Model -> Browser.Document Msg
 appView model =
     model.project
+        |> Maybe.andThen toAppInfo
         |> Maybe.map (viewCurrentPage model.page)
         |> Maybe.withDefault viewInvalidElmJson
+
+
+toAppInfo : Elm.Project.Project -> Maybe Elm.Project.ApplicationInfo
+toAppInfo project =
+    case project of
+        Elm.Project.Application info ->
+            Just info
+
+        _ ->
+            Nothing
 
 
 viewInvalidElmJson : Browser.Document msg
@@ -126,7 +137,7 @@ viewInvalidElmJson =
     }
 
 
-viewCurrentPage : Page -> Elm.Project.Project -> Browser.Document Msg
+viewCurrentPage : Page -> Elm.Project.ApplicationInfo -> Browser.Document Msg
 viewCurrentPage page project =
     case page of
         HomePage ->
@@ -136,7 +147,9 @@ viewCurrentPage page project =
 
         PackagePage pkgPage ->
             { title = "elm-doc"
-            , body = Page.Package.view pkgPage |> List.map (Html.map PackagePageMsg)
+            , body =
+                Page.Package.view project pkgPage
+                    |> List.map (Html.map PackagePageMsg)
             }
 
         _ ->

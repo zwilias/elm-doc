@@ -1,15 +1,20 @@
 module Page.Package exposing (Model, Msg, init, update, view)
 
+import Browser.Navigation
 import Dict exposing (Dict)
 import Elm.Docs
 import Elm.Module
+import Elm.Package
 import Elm.Project
+import Elm.Type
 import Elm.Version
 import Html exposing (Html)
 import Html.Attributes as Attr
+import Html.Events as Events
 import Http
-import Json.Decode as Json
+import Json.Decode as Decode exposing (Decoder)
 import Markdown
+import Page.Block as Block
 import Route
 
 
@@ -44,6 +49,7 @@ type Msg
     = GotReadme (RemoteData String)
     | GotPkgInfo (RemoteData Elm.Project.PackageInfo)
     | GotDocs (RemoteData (Dict String Elm.Docs.Module))
+    | GotoUrl String
 
 
 init : String -> Elm.Version.Version -> Maybe String -> ( Model, Cmd Msg )
@@ -88,27 +94,27 @@ loadDocs name version =
         }
 
 
-docsDecoder : Json.Decoder (Dict String Elm.Docs.Module)
+docsDecoder : Decoder (Dict String Elm.Docs.Module)
 docsDecoder =
-    Json.map (List.map (\d -> ( d.name, d )) >> Dict.fromList) (Json.list Elm.Docs.decoder)
+    Decode.map (List.map (\d -> ( d.name, d )) >> Dict.fromList) (Decode.list Elm.Docs.decoder)
 
 
-packageInfoDecoder : Json.Decoder Elm.Project.PackageInfo
+packageInfoDecoder : Decoder Elm.Project.PackageInfo
 packageInfoDecoder =
-    Json.andThen
+    Decode.andThen
         (\projectInfo ->
             case projectInfo of
                 Elm.Project.Package info ->
-                    Json.succeed info
+                    Decode.succeed info
 
                 _ ->
-                    Json.fail "Expected package info"
+                    Decode.fail "Expected package info"
         )
         Elm.Project.decoder
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg (Model data) =
+update : Browser.Navigation.Key -> Msg -> Model -> ( Model, Cmd Msg )
+update key msg ((Model data) as model) =
     case msg of
         GotReadme readme ->
             ( Model { data | readme = readme }, Cmd.none )
@@ -119,9 +125,23 @@ update msg (Model data) =
         GotDocs docs ->
             ( Model { data | docs = docs }, Cmd.none )
 
+        GotoUrl url ->
+            ( model
+            , Browser.Navigation.pushUrl key url
+            )
 
-view : Model -> List (Html Msg)
-view ((Model data) as model) =
+
+view : Elm.Project.ApplicationInfo -> Model -> List (Html Msg)
+view project model =
+    [ Html.div [ Attr.class "package-page" ]
+        [ viewSidebar project model
+        , Html.div [ Attr.class "page-content" ] (viewContent model)
+        ]
+    ]
+
+
+viewContent : Model -> List (Html Msg)
+viewContent ((Model data) as model) =
     case data.currentModule of
         Nothing ->
             viewPackageOverview model
@@ -132,12 +152,7 @@ view ((Model data) as model) =
 
 viewPackageOverview : Model -> List (Html Msg)
 viewPackageOverview ((Model data) as model) =
-    [ Html.text data.name
-    , Html.text " "
-    , Html.text (Elm.Version.toString data.version)
-    , viewReadme data.readme
-    , viewPkgInfo model data.pkgInfo
-    ]
+    [ viewReadme data.readme ]
 
 
 viewModuleDocs : String -> Model -> List (Html Msg)
@@ -150,41 +165,57 @@ viewModuleDocs currentModule (Model data) =
             [ Html.text "Oh noes!" ]
 
         Loaded docs ->
+            let
+                info =
+                    Block.makeInfo data.name data.version currentModule (Dict.values docs)
+            in
             docs
                 |> Dict.get currentModule
-                |> Maybe.map viewModule
+                |> Maybe.map (viewModule info)
                 |> Maybe.withDefault [ Html.text "unknown module" ]
 
 
-viewModule : Elm.Docs.Module -> List (Html Msg)
-viewModule currentModule =
+viewSidebar : Elm.Project.ApplicationInfo -> Model -> Html Msg
+viewSidebar project ((Model data) as model) =
+    Html.div
+        [ Attr.class "sidebar" ]
+        [ viewQuickNav project data.name
+        , Html.p []
+            [ Html.a
+                [ Attr.href ("/" ++ data.name ++ "/" ++ Elm.Version.toString data.version) ]
+                [ Html.text "README" ]
+            ]
+        , viewPkgInfo model data.pkgInfo
+        ]
+
+
+viewQuickNav : Elm.Project.ApplicationInfo -> String -> Html Msg
+viewQuickNav project currentPackage =
+    Html.select [ Events.on "change" (Decode.map GotoUrl Events.targetValue) ]
+        (List.map (quickNavOption currentPackage) project.depsDirect)
+
+
+quickNavOption : String -> ( Elm.Package.Name, Elm.Version.Version ) -> Html msg
+quickNavOption self ( package, version ) =
+    let
+        url =
+            "/" ++ Elm.Package.toString package ++ "/" ++ Elm.Version.toString version
+    in
+    Html.option
+        [ Attr.selected (self == Elm.Package.toString package)
+        , Attr.value url
+        ]
+        [ Html.text (Elm.Package.toString package)
+        , Html.text " "
+        , Html.text (Elm.Version.toString version)
+        ]
+
+
+viewModule : Block.Info -> Elm.Docs.Module -> List (Html Msg)
+viewModule info currentModule =
     currentModule
         |> Elm.Docs.toBlocks
-        |> List.filterMap viewBlock
-
-
-viewBlock : Elm.Docs.Block -> Maybe (Html msg)
-viewBlock block =
-    case block of
-        Elm.Docs.MarkdownBlock mdBlock ->
-            Just (Markdown.toHtml [] mdBlock)
-
-        Elm.Docs.ValueBlock valueBlock ->
-            Just (viewValueBlock valueBlock)
-
-        _ ->
-            Nothing
-
-
-viewValueBlock : Elm.Docs.Value -> Html msg
-viewValueBlock value =
-    Html.div [ Attr.id value.name ]
-        [ Html.div [ Attr.class "formatted" ]
-            [ Html.a
-                [ Attr.class "value", Attr.href ("#" ++ value.name) ]
-                [ Html.text value.name ]
-            ]
-        ]
+        |> List.map (Block.view info)
 
 
 viewPkgInfo : Model -> RemoteData Elm.Project.PackageInfo -> Html msg

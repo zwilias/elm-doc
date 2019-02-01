@@ -15,11 +15,13 @@
         "elm-format": "^0.8.1"
     },
     "scripts": {
+        "build-dev": "elm make elm/Main.elm --output elm.js",
         "build": "elm make --optimize elm/Main.elm --output elm.js",
         "prepublishOnly": "npm run build"
     },
     "files": [
         "server.js",
-        "elm.js"
+        "elm.js",
+        "style.css"
     ]
 }

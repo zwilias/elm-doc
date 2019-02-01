@@ -1,2 +1,2 @@
 watch:
-	find elm/ -name "*.elm" -type f | entr npm run build
+	find elm/ -name "*.elm" -type f | entr npm run build-dev
