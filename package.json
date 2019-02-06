@@ -9,7 +9,10 @@
     "bin": {
         "elm-doc": "server.js"
     },
-    "dependencies": {},
+    "dependencies": {
+        "minimist": "^1.2.0",
+        "opn": "^5.4.0"
+    },
     "devDependencies": {
         "elm": "^0.19.0-bugfix6",
         "elm-format": "^0.8.1"

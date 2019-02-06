@@ -4,7 +4,27 @@ var http = require("http"),
     url = require("url"),
     fs = require("fs"),
     path = require("path"),
-    os = require("os");
+    os = require("os"),
+    opn = require("opn"),
+    minimist = require("minimist");
+
+var args = minimist(process.argv.slice(2), {
+    boolean: ["help", "closed"],
+    default: { port: 4040 }
+});
+
+if (args.help) {
+    console.log("Usage:");
+    console.log("");
+    console.log(
+        "  elm-doc              Listen on port 4040 and open a browser"
+    );
+    console.log(
+        "  elm-doc --port=4343  To listen on port 4343 and open a browser"
+    );
+    console.log("  elm-doc --closed     Prevent the browser from being opened");
+    process.exit(0);
+}
 
 http
     .createServer(function(request, response) {
@@ -20,7 +40,14 @@ http
             serveIndex(response);
         }
     })
-    .listen(4040)
+    .listen(args.port)
+    .on("listening", function() {
+        console.log("Listening on port", args.port);
+        if (!args["closed"]) {
+            var url = "http://localhost:" + args.port;
+            opn(url);
+        }
+    })
     .on("error", handleError);
 
 function handleError(error) {
