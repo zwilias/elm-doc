@@ -1,6 +1,6 @@
 {
     "name": "elm-doc",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "Elm dependency documentation tool",
     "main": "server.js",
     "author": "Ilias Van Peer",
