@@ -14,8 +14,8 @@
         "opn": "^5.4.0"
     },
     "devDependencies": {
-        "elm": "^0.19.0-bugfix6",
-        "elm-format": "^0.8.1"
+        "elm": "^0.19.1-5",
+        "elm-format": "^0.8.5"
     },
     "scripts": {
         "build-dev": "elm make elm/Main.elm --output elm.js",
