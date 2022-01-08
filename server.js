@@ -102,7 +102,7 @@ function elmHome() {
 }
 
 function pkgsHome() {
-    return path.join(elmHome(), "0.19.1", "package");
+    return path.join(elmHome(), "0.19.1", "packages");
 }
 
 function serveIndex(response) {
